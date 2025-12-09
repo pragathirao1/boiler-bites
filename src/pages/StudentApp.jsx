@@ -5,6 +5,7 @@ import { VENUES } from '../data/venues'
 import { ArrowLeft, CheckCircle, Leaf, Sparkles, MapPin } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
+import emailjs from '@emailjs/browser'
 
 export default function StudentApp() {
   const { getAvailableItems, claimItem, claimSuccess, studentStats } = useFood()
@@ -17,6 +18,8 @@ export default function StudentApp() {
   const [isClaiming, setIsClaiming] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [claimFormData, setClaimFormData] = useState({ name: '', email: '' })
+  const [isSendingEmail, setIsSendingEmail] = useState(false)
+  const [emailError, setEmailError] = useState(null)
 
   const availableItems = getAvailableItems()
 
@@ -135,26 +138,68 @@ export default function StudentApp() {
     })
   }
 
-  const handleConfirmReservation = (e) => {
+  const handleConfirmReservation = async (e) => {
     e.preventDefault()
     if (!selectedItem || !claimFormData.name || !claimFormData.email) {
       return
     }
 
-    // Call claimItem with student details
-    const result = claimItem(selectedItem.id, claimFormData.name, claimFormData.email)
-    
-    if (result.success) {
-      // Update local state
-      setStudentName(claimFormData.name)
-      setStudentEmail(claimFormData.email)
+    setIsSendingEmail(true)
+    setEmailError(null)
+
+    // Generate order ID
+    const orderId = `#BB-${Math.floor(Math.random() * 1000)}`
+
+    // Prepare email template parameters
+    const templateParams = {
+      student_name: claimFormData.name,
+      student_email: claimFormData.email,
+      item_name: selectedItem.name,
+      venue_name: selectedItem.venueName,
+      price: selectedItem.discountedPrice.toFixed(2),
+      order_id: orderId,
+    }
+
+    try {
+      // Send email using EmailJS
+      await emailjs.send(
+        'service_7e29925', // Your EmailJS Service ID
+        'template_j8rzp5k', // Your EmailJS Template ID
+        templateParams,
+        'fyqks3yfURCUHwiDR' // Your EmailJS Public Key
+      )
+
+      // Email sent successfully, now claim the item
+      const result = claimItem(selectedItem.id, claimFormData.name, claimFormData.email)
       
-      // Close modal
-      setIsClaiming(false)
-      setSelectedItem(null)
+      if (result.success) {
+        // Update local state
+        setStudentName(claimFormData.name)
+        setStudentEmail(claimFormData.email)
+        
+        // Close modal
+        setIsClaiming(false)
+        setSelectedItem(null)
+        
+        // Show success animation
+        setClaimedItemData(selectedItem)
+      }
+    } catch (error) {
+      console.error('Email sending failed:', error)
+      setEmailError('Could not send email, but reservation saved.')
       
-      // Show success animation
-      setClaimedItemData(selectedItem)
+      // Still claim the item even if email fails
+      const result = claimItem(selectedItem.id, claimFormData.name, claimFormData.email)
+      
+      if (result.success) {
+        setStudentName(claimFormData.name)
+        setStudentEmail(claimFormData.email)
+        setIsClaiming(false)
+        setSelectedItem(null)
+        setClaimedItemData(selectedItem)
+      }
+    } finally {
+      setIsSendingEmail(false)
     }
   }
 
@@ -428,9 +473,10 @@ export default function StudentApp() {
                 <div className="flex gap-4 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 bg-purdue-gold text-purdue-black px-6 py-3 rounded-xl font-semibold hover:bg-purdue-gold/80 transition-colors"
+                    disabled={isSendingEmail}
+                    className="flex-1 bg-purdue-gold text-purdue-black px-6 py-3 rounded-xl font-semibold hover:bg-purdue-gold/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Confirm Reservation
+                    {isSendingEmail ? 'Sending Confirmation...' : 'Confirm Reservation'}
                   </button>
                   <button
                     type="button"
@@ -445,6 +491,26 @@ export default function StudentApp() {
                 </div>
               </form>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Email Error Toast */}
+      <AnimatePresence>
+        {emailError && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-4 right-4 bg-yellow-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-sm"
+          >
+            <p className="font-semibold">{emailError}</p>
+            <button
+              onClick={() => setEmailError(null)}
+              className="mt-2 text-sm underline"
+            >
+              Dismiss
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
