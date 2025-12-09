@@ -186,7 +186,12 @@ export default function StudentApp() {
       }
     } catch (error) {
       console.error('Email sending failed:', error)
-      setEmailError('Could not send email, but reservation saved.')
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        text: error.text,
+      })
+      setEmailError(`Could not send email: ${error.text || error.message || 'Unknown error'}. Reservation saved.`)
       
       // Still claim the item even if email fails
       const result = claimItem(selectedItem.id, claimFormData.name, claimFormData.email)
