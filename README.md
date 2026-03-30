@@ -82,6 +82,17 @@ Available npm scripts (from `package.json`):
 - `npm run build` — Build production assets with Vite.
 - `npm run preview` — Preview the production build locally.
 
+## Deployment
+
+This project is hosted live at: https://boilerbites.netlify.app
+
+The site is deployed to Netlify. To update the deployed site you can:
+
+- Build a production bundle locally and deploy the `dist/` folder (`npm run build`).
+- Or connect the GitHub repository to Netlify for automatic deploys on pushes to `main` (recommended for CI/CD).
+
+If you want, I can add a short GitHub Actions workflow or Netlify configuration to automate builds on push.
+
 ## Notes on extending the app
 
 - To add authentication, insert an auth provider at `src/main.jsx` and protect routes in `src/App.jsx`.
